@@ -1,0 +1,2 @@
+#pragma once
+static constexpr char kImeCaretScript[] = R"CEF_IME_JS(@IME_CARET_JS@)CEF_IME_JS";

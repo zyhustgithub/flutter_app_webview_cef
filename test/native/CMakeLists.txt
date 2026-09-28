@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.14)
+project(ime_native_tests LANGUAGES CXX)
+enable_testing()
+add_executable(ime_geometry_test ime_geometry_test.cpp)
+target_compile_features(ime_geometry_test PRIVATE cxx_std_17)
+target_include_directories(ime_geometry_test PRIVATE ../../third_party/webview_cef/common)
+# Keep assertions enabled in Release as well.
+if(MSVC)
+  target_compile_options(ime_geometry_test PRIVATE /UNDEBUG)
+endif()
+add_test(NAME ime_geometry COMMAND ime_geometry_test)

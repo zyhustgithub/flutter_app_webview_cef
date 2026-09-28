@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CEF 微软拼音输入测试</title>
+<style>
+body { font: 18px/1.6 sans-serif; margin: 28px; color: #163047; background: #f5f8fc; }
+input,textarea,[contenteditable] { font: inherit; box-sizing:border-box; padding:12px; border:1px solid #829bb3; border-radius:6px; background:white; width:100%; }
+textarea { height:150px; } section { margin: 18px 0; } iframe { width:95%; height:220px; border:5px solid #b2c7dd; }
+.scroll { height:170px; overflow:auto; padding:14px; border:1px solid #829bb3; }
+</style>
+<h2>微软拼音候选框与输入回归</h2>
+<p>分别检查首次输入、数字/空格选词、回车、Esc、退格、中英文切换及剪贴板。按 Tab 切换目标。</p>
+<section><label>单行（点击中间再输入）<input value="在这里测试中文和 English 输入"></label></section>
+<section><label>多行（在第一行、中间行和末行输入）<textarea>第一行
+第二行用于测试光标位置
+第三行
+第四行
+第五行</textarea></label></section>
+<section><div contenteditable>富文本编辑区：<b>在粗体中输入</b><br>换行后再次输入中文。</div></section>
+<section class="scroll"><p>滚动容器，向下滚动后输入。</p><div style="height:180px"></div><input placeholder="滚动后的输入框"><div style="height:80px"></div></section>
+<section><label>密码输入（日志不得包含文本）<input type="password" autocomplete="off"></label></section>
+<section><h3>iframe 内输入</h3><iframe srcdoc="<!doctype html><meta charset='utf-8'><style>body{font:18px sans-serif;padding:20px}input,textarea{font:inherit;width:90%}</style><input placeholder='iframe 单行'><p><textarea>iframe 多行&#10;第二行</textarea>"></iframe></section>
+<section><h3>不同来源的 data iframe</h3><iframe id="opaque"></iframe></section>
+<script>
+document.querySelector('#opaque').src = 'data:text/html;charset=utf-8,' + encodeURIComponent('<meta charset="utf-8"><style>body{padding:24px}input{font:20px sans-serif;width:90%}</style><input placeholder="跨来源 iframe 中文输入"><script>addEventListener("message",e=>{if(e.data==="focus")document.querySelector("input").focus()})<\/script>');
+</script>
