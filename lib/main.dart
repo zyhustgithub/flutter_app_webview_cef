@@ -90,12 +90,12 @@ class _HomePageState extends State<HomePage> {
               ),
               _ActionCard(
                 icon: Icons.tab,
-                title: '内嵌网页',
-                subtitle: '以路由页面形式打开 WebView（含导航栏 + 日志面板）',
+                title: '内嵌双网页',
+                subtitle: '左侧百度、右侧 Bing，按 2:1 宽度测试双 WebView',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) =>
-                        EmbeddedWebViewPage(url: _url, title: '内嵌网页'),
+                        EmbeddedWebViewPage(url: _url, title: '内嵌双网页'),
                   ),
                 ),
               ),

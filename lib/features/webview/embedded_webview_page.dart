@@ -15,47 +15,81 @@ class EmbeddedWebViewPage extends StatefulWidget {
 }
 
 class _EmbeddedWebViewPageState extends State<EmbeddedWebViewPage> {
-  final GlobalKey<CefWebViewState> _webViewKey =
+  static const String _baiduUrl = 'https://www.baidu.com';
+  static const String _bingUrl = 'https://www.bing.com';
+
+  final GlobalKey<CefWebViewState> _baiduWebViewKey =
+      GlobalKey<CefWebViewState>();
+  final GlobalKey<CefWebViewState> _bingWebViewKey =
       GlobalKey<CefWebViewState>();
 
-  String _title = '';
-  String _currentUrl = '';
+  String _baiduTitle = '';
+  String _bingTitle = '';
+  String _baiduCurrentUrl = _baiduUrl;
+  String _bingCurrentUrl = _bingUrl;
   final List<_ConsoleEntry> _logs = [];
   bool _showConsole = false;
 
-  void _appendLog(int level, String message, String source, int line) {
+  void _appendLog(
+    String webViewName,
+    int level,
+    String message,
+    String source,
+    int line,
+  ) {
     if (!mounted) return;
     setState(() {
-      _logs.insert(0, _ConsoleEntry(level, message, source, line));
+      _logs.insert(0, _ConsoleEntry(webViewName, level, message, source, line));
       if (_logs.length > 50) _logs.removeLast();
     });
   }
 
+  void _goBackAll() {
+    _baiduWebViewKey.currentState?.goBack();
+    _bingWebViewKey.currentState?.goBack();
+  }
+
+  void _goForwardAll() {
+    _baiduWebViewKey.currentState?.goForward();
+    _bingWebViewKey.currentState?.goForward();
+  }
+
+  void _reloadAll() {
+    _baiduWebViewKey.currentState?.reload();
+    _bingWebViewKey.currentState?.reload();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pageTitle = widget.title ?? '内嵌双网页';
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title.isEmpty ? (widget.title ?? '内嵌网页') : _title),
+        title: Text(pageTitle),
         actions: [
           IconButton(
-            tooltip: '后退',
+            tooltip: '两个网页后退',
             icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => _webViewKey.currentState?.goBack(),
+            onPressed: _goBackAll,
           ),
           IconButton(
-            tooltip: '前进',
+            tooltip: '两个网页前进',
             icon: const Icon(Icons.arrow_forward_ios),
-            onPressed: () => _webViewKey.currentState?.goForward(),
+            onPressed: _goForwardAll,
           ),
           IconButton(
-            tooltip: '刷新',
+            tooltip: '刷新两个网页',
             icon: const Icon(Icons.refresh),
-            onPressed: () => _webViewKey.currentState?.reload(),
+            onPressed: _reloadAll,
           ),
           IconButton(
-            tooltip: 'DevTools',
+            tooltip: '打开百度 DevTools',
             icon: const Icon(Icons.developer_mode),
-            onPressed: () => _webViewKey.currentState?.openDevTools(),
+            onPressed: () => _baiduWebViewKey.currentState?.openDevTools(),
+          ),
+          IconButton(
+            tooltip: '打开 Bing DevTools',
+            icon: const Icon(Icons.developer_board),
+            onPressed: () => _bingWebViewKey.currentState?.openDevTools(),
           ),
           IconButton(
             tooltip: '查看日志',
@@ -70,30 +104,121 @@ class _EmbeddedWebViewPageState extends State<EmbeddedWebViewPage> {
       ),
       body: Stack(
         children: [
-          // 背景色用来区分「CEF 白屏」和「Widget 区域为空」
-          CefWebView(
-            key: _webViewKey,
-            url: widget.url,
-            background: const Color(0xFFEFEFEF),
-            onPageTitle: (t) {
-              if (!mounted) return;
-              setState(() => _title = t);
-            },
-            onUrlChanged: (u) {
-              if (!mounted) return;
-              setState(() => _currentUrl = u);
-            },
-            onConsoleMessage: _appendLog,
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _WebViewPane(
+                  label: '百度',
+                  title: _baiduTitle,
+                  url: _baiduCurrentUrl,
+                  child: CefWebView(
+                    key: _baiduWebViewKey,
+                    url: _baiduUrl,
+                    background: const Color(0xFFEFEFEF),
+                    onPageTitle: (t) {
+                      if (!mounted) return;
+                      setState(() => _baiduTitle = t);
+                    },
+                    onUrlChanged: (u) {
+                      if (!mounted) return;
+                      setState(() => _baiduCurrentUrl = u);
+                    },
+                    onConsoleMessage: (level, message, source, line) =>
+                        _appendLog('百度', level, message, source, line),
+                  ),
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                flex: 1,
+                child: _WebViewPane(
+                  label: 'Bing',
+                  title: _bingTitle,
+                  url: _bingCurrentUrl,
+                  child: CefWebView(
+                    key: _bingWebViewKey,
+                    url: _bingUrl,
+                    background: const Color(0xFFEFEFEF),
+                    onPageTitle: (t) {
+                      if (!mounted) return;
+                      setState(() => _bingTitle = t);
+                    },
+                    onUrlChanged: (u) {
+                      if (!mounted) return;
+                      setState(() => _bingCurrentUrl = u);
+                    },
+                    onConsoleMessage: (level, message, source, line) =>
+                        _appendLog('Bing', level, message, source, line),
+                  ),
+                ),
+              ),
+            ],
           ),
-          if (_showConsole) _ConsolePanel(logs: _logs, currentUrl: _currentUrl),
+          if (_showConsole)
+            _ConsolePanel(
+              logs: _logs,
+              currentUrls: {'百度': _baiduCurrentUrl, 'Bing': _bingCurrentUrl},
+            ),
         ],
       ),
     );
   }
 }
 
+class _WebViewPane extends StatelessWidget {
+  const _WebViewPane({
+    required this.label,
+    required this.title,
+    required this.url,
+    required this.child,
+  });
+
+  final String label;
+  final String title;
+  final String url;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          color: theme.colorScheme.surfaceContainerHighest,
+          child: Row(
+            children: [
+              Text(label, style: theme.textTheme.labelLarge),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title.isEmpty ? url : title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
 class _ConsoleEntry {
-  const _ConsoleEntry(this.level, this.message, this.source, this.line);
+  const _ConsoleEntry(
+    this.webViewName,
+    this.level,
+    this.message,
+    this.source,
+    this.line,
+  );
+  final String webViewName;
   final int level;
   final String message;
   final String source;
@@ -101,10 +226,10 @@ class _ConsoleEntry {
 }
 
 class _ConsolePanel extends StatelessWidget {
-  const _ConsolePanel({required this.logs, required this.currentUrl});
+  const _ConsolePanel({required this.logs, required this.currentUrls});
 
   final List<_ConsoleEntry> logs;
-  final String currentUrl;
+  final Map<String, String> currentUrls;
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +247,10 @@ class _ConsolePanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 color: Colors.black54,
                 child: Row(
                   children: [
@@ -130,20 +258,34 @@ class _ConsolePanel extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'URL: $currentUrl',
+                        currentUrls.entries
+                            .map((e) => '${e.key}: ${e.value}')
+                            .join('  |  '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy, color: Colors.white, size: 16),
+                      icon: const Icon(
+                        Icons.copy,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(
+                        Clipboard.setData(
+                          ClipboardData(
                             text: logs
-                                .map((e) =>
-                                    '[L${e.level}] ${e.source}:${e.line} ${e.message}')
-                                .join('\n')));
+                                .map(
+                                  (e) =>
+                                      '[${e.webViewName}][L${e.level}] ${e.source}:${e.line} ${e.message}',
+                                )
+                                .join('\n'),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -153,8 +295,10 @@ class _ConsolePanel extends StatelessWidget {
                 child: logs.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('（暂无日志）',
-                            style: TextStyle(color: Colors.white70)),
+                        child: Text(
+                          '（暂无日志）',
+                          style: TextStyle(color: Colors.white70),
+                        ),
                       )
                     : ListView.builder(
                         shrinkWrap: true,
@@ -163,9 +307,11 @@ class _ConsolePanel extends StatelessWidget {
                           final e = logs[i];
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 2),
+                              horizontal: 12,
+                              vertical: 2,
+                            ),
                             child: Text(
-                              '[L${e.level}] ${e.source}:${e.line}\n${e.message}',
+                              '[${e.webViewName}][L${e.level}] ${e.source}:${e.line}\n${e.message}',
                               style: TextStyle(
                                 color: _levelColor(e.level),
                                 fontSize: 11,
