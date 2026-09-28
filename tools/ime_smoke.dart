@@ -113,6 +113,29 @@ Future<void> _run(Map<String, Object?> checks) async {
   if ((single['x'] as num) < 20 || (single['y'] as num) < 20) {
     throw StateError('Caret at origin');
   }
+  final movingInitial = await focus(
+    "document.querySelector('#moving-input').focus(); document.querySelector('#moving-input').setSelectionRange(0,0);",
+  );
+  checks['movingInitial'] = movingInitial;
+  await controller.executeJavaScript(
+    "document.querySelector('#moving-search').classList.add('moved');",
+  );
+  Map<String, dynamic> movingAfter = movingInitial;
+  for (var i = 0; i < 20; i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    movingAfter = await _snapshot();
+    if ((movingInitial['screenY'] as num) - (movingAfter['screenY'] as num) >
+        80) {
+      break;
+    }
+  }
+  checks['movingAfter'] = movingAfter;
+  if ((movingInitial['screenY'] as num) - (movingAfter['screenY'] as num) <
+      80) {
+    throw StateError(
+      'Moving input did not update native candidate anchor: $movingInitial -> $movingAfter',
+    );
+  }
   final multiline = await focus(
     "document.querySelector('textarea').focus(); document.querySelector('textarea').setSelectionRange(0,0);",
   );

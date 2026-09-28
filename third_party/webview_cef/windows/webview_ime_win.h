@@ -38,7 +38,7 @@ class WindowsIme {
   bool click_anchor_ = false;
   double last_client_x_ = 0, last_client_y_ = 0, last_client_height_ = 0;
   double last_screen_x_ = 0, last_screen_y_ = 0;
-  int diagnostics_[5] = {};
+  int diagnostics_[7] = {};
   std::set<WPARAM> ime_keys_;
   cef_ime::Rect rect_;
 };

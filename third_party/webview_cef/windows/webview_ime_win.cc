@@ -131,20 +131,26 @@ void WindowsIme::Position() {
   const auto it = geometry_.find(active_);
   if (it == geometry_.end()) return;
   const auto r = cef_ime::Transform(rect_, it->second);
+  const bool moved = std::abs(last_client_x_ - r.x) > 0.5 ||
+                     std::abs(last_client_y_ - r.y) > 0.5 ||
+                     std::abs(last_client_height_ - r.height) > 0.5;
   last_client_x_ = r.x; last_client_y_ = r.y; last_client_height_ = r.height;
   last_screen_x_ = it->second.screen_x + r.x;
   last_screen_y_ = it->second.screen_y + r.y;
+  if (moved && composing_) ++diagnostics_[6];
   if (!caret_created_) caret_created_ = CreateCaret(hwnd_, nullptr, 1, std::max(1, int(r.height))) != FALSE;
   if (caret_created_) SetCaretPos(int(r.x), int(r.y));
   HIMC imc = ImmGetContext(hwnd_);
   if (!imc) return;
-  CANDIDATEFORM position = {0, CFS_CANDIDATEPOS, {LONG(r.x), LONG(r.y+r.height)}, {0,0,0,0}};
-  ImmSetCandidateWindow(imc, &position);
-  CANDIDATEFORM exclude = {0, CFS_EXCLUDE, {LONG(r.x), LONG(r.y+r.height)},
-      {LONG(r.x), LONG(r.y), LONG(r.x+r.width), LONG(r.y+r.height)}};
-  ImmSetCandidateWindow(imc, &exclude);
   COMPOSITIONFORM composition = {CFS_POINT, {LONG(r.x), LONG(r.y)}, {0,0,0,0}};
   ImmSetCompositionWindow(imc, &composition);
+  for (DWORD index = 0; index < 4; ++index) {
+    CANDIDATEFORM position = {index, CFS_CANDIDATEPOS, {LONG(r.x), LONG(r.y+r.height)}, {0,0,0,0}};
+    ImmSetCandidateWindow(imc, &position);
+    CANDIDATEFORM exclude = {index, CFS_EXCLUDE, {LONG(r.x), LONG(r.y+r.height)},
+        {LONG(r.x), LONG(r.y), LONG(r.x+r.width), LONG(r.y+r.height)}};
+    ImmSetCandidateWindow(imc, &exclude);
+  }
   ImmReleaseContext(hwnd_, imc);
   if (trace_) {
     char line[200]; std::snprintf(line, sizeof(line), "[cef-ime] browser=%d epoch=%llu dpi=%.2f rect=%.0f,%.0f,%.0f,%.0f\n",
@@ -156,7 +162,7 @@ void WindowsIme::Drain() {
   std::deque<cef_ime::Update> updates;
   { std::lock_guard<std::mutex> lock(mailbox_->mutex); updates.swap(mailbox_->updates); }
   for (const auto& u : updates) {
-    if (u.diagnostic > 0 && u.diagnostic < 5) { ++diagnostics_[u.diagnostic]; continue; }
+    if (u.diagnostic > 0 && u.diagnostic < 7) { ++diagnostics_[u.diagnostic]; continue; }
     if (!cef_ime::IsCurrent(u.browser, u.epoch, active_, epoch_)) continue;
     if (u.fallback) {
       if (editable_) Cancel();
@@ -196,6 +202,8 @@ bool WindowsIme::HandleMethod(const flutter::MethodCall<flutter::EncodableValue>
     values[flutter::EncodableValue("contextsReady")] = flutter::EncodableValue(diagnostics_[2]);
     values[flutter::EncodableValue("geometryMessages")] = flutter::EncodableValue(diagnostics_[3]);
     values[flutter::EncodableValue("loadsCompleted")] = flutter::EncodableValue(diagnostics_[4]);
+    values[flutter::EncodableValue("compositionGeometryMessages")] = flutter::EncodableValue(diagnostics_[5]);
+    values[flutter::EncodableValue("compositionRepositions")] = flutter::EncodableValue(diagnostics_[6]);
     result->Success(flutter::EncodableValue(values)); return true;
   }
   if (name == "imeCandidateWindows") {

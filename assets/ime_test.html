@@ -6,10 +6,13 @@ body { font: 18px/1.6 sans-serif; margin: 28px; color: #163047; background: #f5f
 input,textarea,[contenteditable] { font: inherit; box-sizing:border-box; padding:12px; border:1px solid #829bb3; border-radius:6px; background:white; width:100%; }
 textarea { height:150px; } section { margin: 18px 0; } iframe { width:95%; height:220px; border:5px solid #b2c7dd; }
 .scroll { height:170px; overflow:auto; padding:14px; border:1px solid #829bb3; }
+.moving-search { margin-top:220px; transition:transform 80ms linear; }
+.moving-search.moved { transform:translateY(-170px); }
 </style>
 <h2>微软拼音候选框与输入回归</h2>
 <p>分别检查首次输入、数字/空格选词、回车、Esc、退格、中英文切换及剪贴板。按 Tab 切换目标。</p>
 <section><label>单行（点击中间再输入）<input value="在这里测试中文和 English 输入"></label></section>
+<section id="moving-search" class="moving-search"><label>百度式输入后上移<input id="moving-input" placeholder="首次输入后输入框会上移"></label></section>
 <section><label>多行（在第一行、中间行和末行输入）<textarea>第一行
 第二行用于测试光标位置
 第三行
@@ -22,4 +25,9 @@ textarea { height:150px; } section { margin: 18px 0; } iframe { width:95%; heigh
 <section><h3>不同来源的 data iframe</h3><iframe id="opaque"></iframe></section>
 <script>
 document.querySelector('#opaque').src = 'data:text/html;charset=utf-8,' + encodeURIComponent('<meta charset="utf-8"><style>body{padding:24px}input{font:20px sans-serif;width:90%}</style><input placeholder="跨来源 iframe 中文输入"><script>addEventListener("message",e=>{if(e.data==="focus")document.querySelector("input").focus()})<\/script>');
+const movingInput = document.querySelector('#moving-input');
+const movingSearch = document.querySelector('#moving-search');
+['beforeinput','input','compositionstart','compositionupdate','keydown'].forEach(event => {
+  movingInput.addEventListener(event, () => movingSearch.classList.add('moved'), {once:true});
+});
 </script>

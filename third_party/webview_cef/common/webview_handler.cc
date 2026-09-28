@@ -80,7 +80,10 @@ bool WebviewHandler::OnProcessMessageReceived(
         if (it == browser_map_.end()) return true;
         it->second.native_editable = args->GetBool(1);
         if (!it->second.native_editable) nativeInput(native_browser_, native_epoch_, cef_ime::Input::Cancel);
-        if (!native_composition_.composing && native_callback_) {
+        if (native_callback_) {
+            if (native_composition_.composing) {
+                native_callback_({browser->GetIdentifier(), native_epoch_, false, false, {}, 5});
+            }
             cef_ime::Update update;
             update.browser = native_browser_; update.epoch = native_epoch_;
             update.editable = args->GetBool(1); update.has_rect = update.editable;
